@@ -1,26 +1,39 @@
-import axios from 'axios';
-
 export default async function handler(req, res) {
-  const code = req.query.code;
-  const redirect_uri = 'https://oauth-proxy-steel.vercel.app/';
+  const { code } = req.query;
+
+  if (!code) {
+    return res.status(400).json({ error: 'Missing code parameter' });
+  }
+
+  const tokenUrl = 'https://oauth2.googleapis.com/token';
+  const params = new URLSearchParams({
+    code,
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    redirect_uri: process.env.REDIRECT_URI,
+    grant_type: 'authorization_code',
+  });
 
   try {
-    const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
-      redirect_uri,
-      grant_type: 'authorization_code',
+    const response = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
     });
 
-    const tokens = tokenRes.data;
+    const tokens = await response.json();
 
-    // Send tokens to your n8n webhook
-    await axios.post('https://n8n.dynamis-ai.com/webhook/oauth-received', tokens);
+    if (tokens.error) {
+      return res.status(400).json({ error: tokens.error });
+    }
 
-    res.send('✅ Connected successfully! You can close this tab now.');
-  } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).send('❌ Something went wrong. Please contact support.');
+    // Display tokens directly in browser for testing
+    return res.status(200).json({
+      message: 'OAuth success! Copy these tokens into n8n.',
+      tokens,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: 'Token exchange failed', details: error.message });
   }
 }
+
