@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     console.log("Tokens received:", tokens);
 
     // Send tokens to n8n webhook
-    const webhookUrl = "https://n8n.dynamis-ai.com/webhook/oauth-received";
+    const webhookUrl = "https://n8n.dynamis-ai.com/webhook-test/webhook/oauth-received";
     const response = await axios.post(webhookUrl, tokens);
     console.log("Sent tokens to n8n:", response.status);
 
