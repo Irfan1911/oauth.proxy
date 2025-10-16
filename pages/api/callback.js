@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
     res.send('✅ Connected successfully! You can close this tab now.');
   } catch (err) {
-    console.error(err.response?.data || err.message);
+    console.error("Full error object:", err);
     res.status(500).send('❌ Something went wrong. Please contact support.');
   }
 }
