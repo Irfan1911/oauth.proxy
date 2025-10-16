@@ -1,26 +1,29 @@
-import axios from 'axios';
+import axios from "axios";
+import { google } from "googleapis";
 
 export default async function handler(req, res) {
-  const code = req.query.code;
-  const redirect_uri = 'https://oauth-proxy-steel.vercel.app/api/callback';
-
   try {
-    const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: process.env.CLIENT_ID,
-      client_secret: process.env.CLIENT_SECRET,
-      redirect_uri,
-      grant_type: 'authorization_code',
-    });
+    const { code } = req.query;
+    console.log("Received code:", code);
 
-    const tokens = tokenRes.data;
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET,
+      process.env.REDIRECT_URI
+    );
 
-    // Send tokens to your n8n webhook
-    await axios.post('https://n8n.dynamis-ai.com/webhook/oauth-received', tokens);
+    const { tokens } = await oauth2Client.getToken(code);
+    console.log("Tokens obtained:", tokens);
 
-    res.send('✅ Connected successfully! You can close this tab now.');
-  } catch (err) {
-    console.error("Full error object:", err);
-    res.status(500).send('❌ Something went wrong. Please contact support.');
+    // Send tokens to n8n webhook
+    const webhookUrl = "https://n8n.dynamis-ai.com/webhook/oauth-received";
+    const response = await axios.post(webhookUrl, tokens);
+
+    console.log("Sent tokens to n8n:", response.status);
+
+    res.status(200).send("✅ Success! You can close this tab now.");
+  } catch (error) {
+    console.error("Error during OAuth callback:", error.message, error.stack);
+    res.status(500).send("❌ Something went wrong. Please contact support.");
   }
 }
